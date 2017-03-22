@@ -46,10 +46,10 @@ count, loff_t *f_pos)
 }
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
-    if (buf != NULL && *f_pos) {
-        onebyte_data[0] = buf[0];
-    } else {
+    if (buf != NULL && count >=1 && 0 == *f_pos) {
+        copy_from_user(onebyte_data, buf, 1);
         (*f_pos)++;
+    } else {
         return 0;
     }
     return 1;
