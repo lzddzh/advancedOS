@@ -36,8 +36,8 @@ int onebyte_release(struct inode *inode, struct file *filep)
 ssize_t onebyte_read(struct file *filep, char *buf, size_t
 count, loff_t *f_pos)
 {
-    if (onebyte_data != NULL && count >= 1 && *f_pos) {
-        buf[0] = onebyte_data[0]; 
+    if (onebyte_data != NULL && count >=1 && 0 == *f_pos) {
+        copy_to_user(buf, onebyte_data, 1);
         (*f_pos)++;
     } else {
         return 0;
@@ -46,7 +46,7 @@ count, loff_t *f_pos)
 }
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
-    if (buf != NULL && count >= 1 && *f_pos) {
+    if (buf != NULL && *f_pos) {
         onebyte_data[0] = buf[0];
     } else {
         (*f_pos)++;
@@ -56,13 +56,13 @@ ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t 
 }
 static int onebyte_init(void)
 {
-     printk(KERN_ALERT "1This is a onebyte device module\n");
      int result;
      // register the device
-     result = register_chrdev(MAJOR_NUMBER, "onebyte",
+     result = register_chrdev(MAJOR_NUMBER, "one",
 &onebyte_fops);
      if (result < 0) {
-     }    return result;
+         return result;
+     }
      // allocate one byte of memory for storage
      // kmalloc is just like malloc, the second parameter is
 // the type of memory to be allocated.
@@ -72,7 +72,8 @@ static int onebyte_init(void)
           onebyte_exit();
           // cannot allocate memory
           // return no memory error, negative signify a failure
-     }    return -ENOMEM;
+         return -ENOMEM;
+     }        
      // initialize the value to be X
      *onebyte_data = 'X';
      printk(KERN_ALERT "This is a onebyte device module\n");
@@ -84,9 +85,9 @@ static void onebyte_exit(void)
      if (onebyte_data) {
           // free the memory and assign the pointer to NULL
           kfree(onebyte_data);
-     }    onebyte_data = NULL;
-     // unregister the device
-     unregister_chrdev(MAJOR_NUMBER, "onebyte");
+          onebyte_data = NULL;
+     }         // unregister the device
+     unregister_chrdev(MAJOR_NUMBER, "one");
      printk(KERN_ALERT "Onebyte device module is unloaded\n");
 }
 MODULE_LICENSE("GPL");
