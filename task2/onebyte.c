@@ -35,14 +35,26 @@ int onebyte_release(struct inode *inode, struct file *filep)
 }
 ssize_t onebyte_read(struct file *filep, char *buf, size_t
 count, loff_t *f_pos)
-{    /*please complete the function on your own*/
-}ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
-     /*please complete the function on your own*/
+    if (onebyte_data != NULL && count >= 1) {
+        buf[0] = onebyte_data[0]; 
+    } else {
+        return 0;
+    }
+    return 1;
+}
+ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
+{
+    if (buf != NULL && count >= 1) {
+        onebyte_data[0] = buf[0];
+    } else {
+        return 0;
+    }
+    return 1;
 }
 static int onebyte_init(void)
 {
-int result;
+     int result;
      // register the device
      result = register_chrdev(MAJOR_NUMBER, "onebyte",
 &onebyte_fops);
@@ -56,8 +68,7 @@ int result;
      if (!onebyte_data) {
           onebyte_exit();
           // cannot allocate memory
-          // return no memory error, negative signify a
-     failure
+          // return no memory error, negative signify a failure
      }    return -ENOMEM;
      // initialize the value to be X
      *onebyte_data = 'X';
