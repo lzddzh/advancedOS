@@ -36,8 +36,9 @@ int onebyte_release(struct inode *inode, struct file *filep)
 ssize_t onebyte_read(struct file *filep, char *buf, size_t
 count, loff_t *f_pos)
 {
-    if (onebyte_data != NULL && count >= 1) {
+    if (onebyte_data != NULL && count >= 1 && *f_pos) {
         buf[0] = onebyte_data[0]; 
+        (*f_pos)++;
     } else {
         return 0;
     }
@@ -45,15 +46,17 @@ count, loff_t *f_pos)
 }
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
-    if (buf != NULL && count >= 1) {
+    if (buf != NULL && count >= 1 && *f_pos) {
         onebyte_data[0] = buf[0];
     } else {
+        (*f_pos)++;
         return 0;
     }
     return 1;
 }
 static int onebyte_init(void)
 {
+     printk(KERN_ALERT "1This is a onebyte device module\n");
      int result;
      // register the device
      result = register_chrdev(MAJOR_NUMBER, "onebyte",
