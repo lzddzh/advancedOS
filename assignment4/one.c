@@ -9,7 +9,8 @@
 #include <asm/uaccess.h>
 #define MAJOR_NUMBER 61
  
-size_t length = 1;
+long long int length = 1;
+size_t pos_buf = 0;
 /* forward declaration */
 int onebyte_open(struct inode *inode, struct file *filep);
 int onebyte_release(struct inode *inode, struct file *filep);
@@ -37,26 +38,47 @@ int onebyte_release(struct inode *inode, struct file *filep)
 ssize_t onebyte_read(struct file *filep, char *buf, size_t
 count, loff_t *f_pos)
 {
-    printk(KERN_ALERT "Read count = %lu\n", count);
-    if (onebyte_data != NULL && count >= 1 && 0 == *f_pos) {
-        copy_to_user(buf, onebyte_data, length);
-        (*f_pos)++;
+    int t = 0;
+    if (onebyte_data != NULL) { 
+    	if (count + (*f_pos) <= length) {
+      	    copy_to_user(buf, onebyte_data + (int)(*f_pos), count);
+            (*f_pos) += count;
+            return count;
+        } else if ((*f_pos) < length) {
+            t = (int)(length - (int)(*f_pos));
+            copy_to_user(buf, onebyte_data + (int)(*f_pos), t); 
+            (*f_pos) = length;
+            return t;
+    	} else {
+	        return 0;
+	    }
     } else {
         return 0;
     }
-    return length;
 }
 ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t *f_pos)
 {
-    printk(KERN_ALERT "Write count = %lu\n", count);
-    if (buf != NULL && count >= 1 && 0 == *f_pos) {
-        copy_from_user(onebyte_data, buf, count);
-        (*f_pos) += count;
+    int t;
+    if (buf != NULL) {
+        if (count > 4 * 1024 * 1024) count = 4 * 1024 * 1024;
+        if ((*f_pos) + count <= 4 * 1024 * 1024) {
+            copy_from_user(onebyte_data + (int)(*f_pos), buf, count);
+            (*f_pos) += count;
+            length = (*f_pos);
+            return count;
+        } else if ((*f_pos) < 4 * 1024 * 1024) {
+            t = (int)(4 * 1024 * 1024 - (int)(*f_pos));
+            copy_from_user(onebyte_data + (int)(*f_pos), buf, t); 
+            (*f_pos) = 4 * 1024 * 1024;
+            length = (*f_pos);
+            return t;
+        } else {
+            printk(KERN_ALERT "ENTERED");
+            return -ENOSPC;
+        } 
     } else {
-        return -ENOSPC;
+        return -EFAULT;
     }
-    length = count;
-    return count;
 }
 static int onebyte_init(void)
 {
@@ -80,7 +102,7 @@ static int onebyte_init(void)
      }        
      // initialize the value to be X
      *onebyte_data = 'X';
-     printk(KERN_ALERT "This is a onebyte device module\n");
+     printk(KERN_ALERT "This is a 4MB device module\n");
      return 0;
 }
 static void onebyte_exit(void)
@@ -92,7 +114,7 @@ static void onebyte_exit(void)
           onebyte_data = NULL;
      }         // unregister the device
      unregister_chrdev(MAJOR_NUMBER, "one");
-     printk(KERN_ALERT "Onebyte device module is unloaded\n");
+     printk(KERN_ALERT "4MB device module is unloaded\n");
 }
 MODULE_LICENSE("GPL");
 module_init(onebyte_init);
