@@ -65,12 +65,14 @@ ssize_t onebyte_write(struct file *filep, const char *buf, size_t count, loff_t 
             copy_from_user(onebyte_data + (int)(*f_pos), buf, count);
             (*f_pos) += count;
             length = (*f_pos);
+            printk(KERN_ALERT "bytes writen = %lu\n", count);
             return count;
         } else if ((*f_pos) < 4 * 1024 * 1024) {
             t = (int)(4 * 1024 * 1024 - (int)(*f_pos));
             copy_from_user(onebyte_data + (int)(*f_pos), buf, t); 
             (*f_pos) = 4 * 1024 * 1024;
             length = (*f_pos);
+            printk(KERN_ALERT "bytes writen = %d\n", t);
             return t;
         } else {
             printk(KERN_ALERT "ENTERED");
