@@ -13,6 +13,7 @@
 #define SCULL_HELLO _IO(SCULL_IOC_MAGIC, 1)
 #define SCULL_WRITE _IOW(SCULL_IOC_MAGIC, 2, char*)
 #define SCULL_READ _IOR(SCULL_IOC_MAGIC, 3, char*)
+#define SCULL_EDIT _IOWR(SCULL_IOC_MAGIC, 4, char*)
 #define MAJOR_NUMBER 61
  
 long long int length = 1;
@@ -70,8 +71,7 @@ loff_t onebyte_lseek(struct file *filep, loff_t offset, int whence) {
 }
 
 long ioctl_example(struct file *filp, unsigned int cmd, unsigned long arg) {
-    printk(KERN_ALERT "%lu\n", arg);
-    int err = 0, tmp;
+    int err = 0, tmp, i;
     int retval = 0;
     /*
     * extract the type and number bitfields, and don't decode
@@ -100,6 +100,16 @@ long ioctl_example(struct file *filp, unsigned int cmd, unsigned long arg) {
         case SCULL_READ: 
             // the msg has fixed length of 10.
             copy_to_user(buf, dev_meg, 10); 
+            retval = 10;
+            break;
+        case SCULL_EDIT: 
+            // the msg has fixed length of 10.
+            printk(KERN_WARNING "Old dev_meg: %s\n", dev_meg);
+            char temp[11];
+            copy_from_user(temp, buf, 10);
+            copy_to_user(buf, dev_meg, 10); 
+            for (i = 0; i < 10; i++) dev_meg[i] = temp[i];
+            printk(KERN_WARNING "New dev_meg: %s\n", dev_meg);
             retval = 10;
             break;
         default: /* redundant, as cmd was checked against MAXNR */ return -ENOTTY;
@@ -175,6 +185,7 @@ static int onebyte_init(void)
           // return no memory error, negative signify a failure
          return -ENOMEM;
      }        
+     dev_meg[10] = 0;
      // initialize the value to be X
      *onebyte_data = 'X';
      printk(KERN_ALERT "This is a 4MB device module\n");
