@@ -11,6 +11,8 @@
 #define SCULL_IOC_MAGIC 'k'
 #define SCULL_IOC_MAXNR 14
 #define SCULL_HELLO _IO(SCULL_IOC_MAGIC, 1)
+#define SCULL_WRITE _IOW(SCULL_IOC_MAGIC, 2, char*)
+#define SCULL_READ _IOR(SCULL_IOC_MAGIC, 3, char*)
 #define MAJOR_NUMBER 61
  
 long long int length = 1;
@@ -35,6 +37,7 @@ struct file_operations onebyte_fops = {
      unlocked_ioctl: ioctl_example
 };
 char *onebyte_data = NULL;
+char *dev_meg = NULL;
 int onebyte_open(struct inode *inode, struct file *filep)
 {
      return 0; // always successful
@@ -67,6 +70,7 @@ loff_t onebyte_lseek(struct file *filep, loff_t offset, int whence) {
 }
 
 long ioctl_example(struct file *filp, unsigned int cmd, unsigned long arg) {
+    printk(KERN_ALERT "%lu\n", arg);
     int err = 0, tmp;
     int retval = 0;
     /*
@@ -82,8 +86,21 @@ long ioctl_example(struct file *filp, unsigned int cmd, unsigned long arg) {
         err = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
     else if (_IOC_DIR(cmd) & _IOC_WRITE)
         err = !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
-    if (err) return -EFAULT; switch(cmd) {
-        case SCULL_HELLO: printk(KERN_WARNING "hello\n");
+    if (err) return -EFAULT;
+    char *buf = (char *)arg;
+    switch(cmd) {
+        case SCULL_HELLO:
+            printk(KERN_WARNING "hello\n");
+            break;
+        case SCULL_WRITE: 
+            // the msg has fixed length of 10.
+            copy_from_user(dev_meg, buf, 10); 
+            retval = 10;
+            break;
+        case SCULL_READ: 
+            // the msg has fixed length of 10.
+            copy_to_user(buf, dev_meg, 10); 
+            retval = 10;
             break;
         default: /* redundant, as cmd was checked against MAXNR */ return -ENOTTY;
     }
@@ -151,7 +168,8 @@ static int onebyte_init(void)
 // the type of memory to be allocated.
      // To release the memory allocated by kmalloc, use kfree.
      onebyte_data = kmalloc(sizeof(char) * 1024 * 1024 * 4, GFP_KERNEL);
-     if (!onebyte_data) {
+     dev_meg = kmalloc(sizeof(char) * 10, GFP_KERNEL);
+     if (!onebyte_data || !dev_meg) {
           onebyte_exit();
           // cannot allocate memory
           // return no memory error, negative signify a failure
